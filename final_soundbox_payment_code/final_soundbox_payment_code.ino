@@ -17,7 +17,6 @@ const char *apPassword = "12345678";
 // Vailovent API Endpoints
 const char* apiUrl = "https://vailovent.my.id/api/v1/transactions/get-transaction-succes-and-is-read";
 const char* latestApiUrl = "https://vailovent.my.id/api/v1/transactions/latest-transaction-completed-isread-true";
-
 // Pin Configuration
 const int buttonPin = 25;       // GPIO25 untuk button
 const int potPin = 34;          // GPIO34 untuk potentiometer
@@ -35,7 +34,7 @@ DFRobotDFPlayerMini player;
 
 // Timing Control
 unsigned long lastFetchTime = 0;
-const unsigned long fetchInterval = 1000;
+const unsigned long fetchInterval = 500;
 bool pauseRegularFetch = false;
 unsigned long buttonPressStartTime = 0;
 
@@ -76,7 +75,6 @@ void configureDFPlayer() {
   player.volume(30);
   player.play(17);  // Play welcome sound 1
   delay(5000);
-  player.volume(30);
   player.play(18);  // Play welcome sound 2
 }
 
@@ -221,40 +219,34 @@ void handleConnect() {
 }
 
 // =============================================
-// FUNGSI AUDIO DAN PEMROSESAN TRANSAKSI
+// FUNGSI AUDIO DAN PEMROSESAN TRANSAKSI (MODIFIED)
 // =============================================
 
-int readStablePotValue(int samples = 200) {
+int readStablePotValue(int samples = 5) {  
   long total = 0;
   for (int i = 0; i < samples; i++) {
     total += analogRead(potPin);
-    delay(2);
+    delay(1);
   }
   return total / samples;
 }
 
 void updateVolumeFromPotentiometer() {
-  int potValue = readStablePotValue();
+  static unsigned long lastVolumeUpdate = 0;
+  const unsigned long volumeUpdateInterval = 50;  
   
-  if (abs(potValue - lastPotValue) >= potThreshold) {
-    int newVolume;
-    
-    if (potValue < 1000) {
-      newVolume = 10;
-    } else if (potValue >= 1000 && potValue < 3500) {
-      newVolume = 20;
-    } else {
-      newVolume = 30;
-    }
+  if (millis() - lastVolumeUpdate >= volumeUpdateInterval) {
+    int potValue = readStablePotValue();
+    int newVolume = map(potValue, 4095, 0, 0, 30); 
+    newVolume = constrain(newVolume, 0, 30);
     
     if (newVolume != lastVolume) {
       player.volume(newVolume);
       lastVolume = newVolume;
-      Serial.print("Volume changed to: ");
-      Serial.println(newVolume);
+      Serial.printf("[Volume] Changed to %d (Pot: %d)\n", newVolume, potValue);
     }
     
-    lastPotValue = potValue;
+    lastVolumeUpdate = millis();
   }
 }
 
@@ -287,7 +279,7 @@ int convertToFileNumber(String soundCode) {
 }
 
 void playSoundForAmount(int total_amount) {
-    player.play(20); // Notifikasi awal
+    player.play(20); 
     delay(1000);
 
     String soundCodes[20];
@@ -386,12 +378,17 @@ void playSoundForAmount(int total_amount) {
         Serial.println(soundCodes[i]);
     }
 
-    // === PLAY SOUND ===
+    // === PLAY SOUND DENGAN REAL-TIME VOLUME CONTROL ===
     for (int i = 0; i < index; i++) {
         int fileNumber = convertToFileNumber(soundCodes[i]);
         if (fileNumber > 0) {
             player.play(fileNumber);
-            delay(1000);
+            
+            unsigned long soundStartTime = millis();
+            while (millis() - soundStartTime < 900) { 
+                updateVolumeFromPotentiometer();
+                delay(10);
+            }
         }
     }
 }
@@ -601,7 +598,6 @@ void setup() {
 }
 
 void loop() {
-  updateVolumeFromPotentiometer();
   server.handleClient();
   checkButton();
   
@@ -612,6 +608,8 @@ void loop() {
     player.volume(30);
     Serial.println("\n[NETWORK] WiFi connected!");
   }
+
+  updateVolumeFromPotentiometer();
 
   if (wifiConnected && !pauseRegularFetch && (millis() - lastFetchTime >= fetchInterval)) {
     fetchTransactionData();
