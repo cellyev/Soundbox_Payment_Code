@@ -41,6 +41,7 @@ unsigned long buttonPressStartTime = 0;
 // WiFi Status
 bool wifiConnected = false;
 bool isScanning = false;
+bool wasConnected = false;
 
 // Button Control
 bool lastButtonState = LOW;
@@ -52,10 +53,13 @@ bool isProcessingButton = false;
 // Potentiometer Control
 int lastPotValue = -1;
 const int potThreshold = 10;
-int lastVolume = 30;  // Volume default 30
+int lastVolume = 20;  // Volume default 20 (out of 25)
 
 // Transaction Data
 String transactionId;
+
+// Function declaration
+String getNumberCode(int num);
 
 // =============================================
 // FUNGSI INISIALISASI
@@ -72,10 +76,12 @@ void configureDFPlayer() {
   }
   
   Serial.println(F("DFPlayer Mini initialized successfully."));
-  player.volume(30);
-  player.play(17);  // Play welcome sound 1
-  delay(5000);
-  player.play(18);  // Play welcome sound 2
+
+}
+
+String getNumberCode(int num) {
+    if (num >= 1 && num <= 9) return "000" + String(num);
+    return "";
 }
 
 // =============================================
@@ -84,19 +90,135 @@ void configureDFPlayer() {
 
 String styleCSS() {
     return "<style>"
-           "body { font-family: Arial, sans-serif; background: #282c34; color: white; text-align: center; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; }"
-           ".container { width: 90%; max-width: 400px; background: #3b4048; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); }"
-           "h1 { color: #61dafb; font-size: 1.5em; }"
-           "select, input, button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 5px; font-size: 1em; }"
-           "button { background: #61dafb; color: white; cursor: pointer; transition: 0.3s; }"
-           "button:hover { background: #21a1f1; }"
-           ".success { color: #28a745; font-weight: bold; }"
-           ".error { color: #dc3545; font-weight: bold; }"
-           "@media (max-width: 480px) {"
-           "  body { padding: 10px; }"
-           "  .container { width: 95%; padding: 15px; }"
-           "  h1 { font-size: 1.3em; }"
-           "  select, input, button { font-size: 0.9em; padding: 10px; }"
+           "* { box-sizing: border-box; margin: 0; padding: 0; }"
+           "body { "
+           "  font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; "
+           "  background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); "
+           "  color: #f8f9fa; "
+           "  min-height: 100vh; "
+           "  display: flex; "
+           "  justify-content: center; "
+           "  align-items: center; "
+           "  padding: 20px; "
+           "  line-height: 1.6; "
+           "}"
+           ".container { "
+           "  width: 100%; "
+           "  max-width: 500px; "
+           "  background: rgba(255, 255, 255, 0.1); "
+           "  backdrop-filter: blur(10px); "
+           "  border-radius: 16px; "
+           "  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); "
+           "  padding: 2rem; "
+           "  border: 1px solid rgba(255, 255, 255, 0.2); "
+           "  transition: all 0.3s ease; "
+           "}"
+           "h1 { "
+           "  color: #ffffff; "
+           "  font-size: 1.8rem; "
+           "  margin-bottom: 1.5rem; "
+           "  text-align: center; "
+           "  font-weight: 600; "
+           "  text-shadow: 0 2px 4px rgba(0,0,0,0.1); "
+           "}"
+           "label { "
+           "  display: block; "
+           "  margin-bottom: 0.5rem; "
+           "  font-weight: 500; "
+           "  color: rgba(255, 255, 255, 0.9); "
+           "}"
+           "select, input, button { "
+           "  width: 100%; "
+           "  padding: 12px 15px; "
+           "  margin-bottom: 1rem; "
+           "  border: none; "
+           "  border-radius: 8px; "
+           "  font-size: 1rem; "
+           "  transition: all 0.3s; "
+           "}"
+           "select, input { "
+           "  background: rgba(255, 255, 255, 0.9); "
+           "  border: 1px solid rgba(0, 0, 0, 0.1); "
+           "}"
+           "select:focus, input:focus { "
+           "  outline: none; "
+           "  box-shadow: 0 0 0 3px rgba(97, 218, 251, 0.3); "
+           "  background: white; "
+           "}"
+           "button { "
+           "  background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%); "
+           "  color: white; "
+           "  font-weight: 600; "
+           "  cursor: pointer; "
+           "  letter-spacing: 0.5px; "
+           "  border: none; "
+           "  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); "
+           "}"
+           "button:hover { "
+           "  transform: translateY(-2px); "
+           "  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); "
+           "}"
+           "button:active { "
+           "  transform: translateY(0); "
+           "}"
+           ".info, .success, .error { "
+           "  padding: 12px; "
+           "  border-radius: 8px; "
+           "  margin-bottom: 1rem; "
+           "  text-align: center; "
+           "  font-weight: 500; "
+           "}"
+           ".info { "
+           "  background: rgba(23, 162, 184, 0.2); "
+           "  border-left: 4px solid #17a2b8; "
+           "}"
+           ".success { "
+           "  background: rgba(40, 167, 69, 0.2); "
+           "  border-left: 4px solid #28a745; "
+           "  color: #d4edda; "
+           "}"
+           ".error { "
+           "  background: rgba(220, 53, 69, 0.2); "
+           "  border-left: 4px solid #dc3545; "
+           "  color: #f8d7da; "
+           "}"
+           "a { "
+           "  color: #4facfe; "
+           "  text-decoration: none; "
+           "  transition: color 0.3s; "
+           "}"
+           "a:hover { "
+           "  color: #00f2fe; "
+           "  text-decoration: underline; "
+           "}"
+           ".form-group { "
+           "  margin-bottom: 1.5rem; "
+           "}"
+           "@media (max-width: 768px) { "
+           "  .container { "
+           "    padding: 1.5rem; "
+           "    max-width: 100%; "
+           "  }"
+           "  h1 { "
+           "    font-size: 1.5rem; "
+           "  }"
+           "}"
+           "@media (max-width: 480px) { "
+           "  body { "
+           "    padding: 15px; "
+           "  }"
+           "  .container { "
+           "    padding: 1.2rem; "
+           "    border-radius: 12px; "
+           "  }"
+           "  h1 { "
+           "    font-size: 1.3rem; "
+           "    margin-bottom: 1rem; "
+           "  }"
+           "  select, input, button { "
+           "    padding: 10px 12px; "
+           "    font-size: 0.9rem; "
+           "  }"
            "}"
            "</style>";
 }
@@ -198,8 +320,8 @@ void handleConnect() {
             page += "<p>IP Address: " + WiFi.localIP().toString() + "</p>";
 
             wifiConnected = true;
-            player.volume(30);
-            player.play(19);  // Play connection success sound
+            updateVolumeFromPotentiometer();
+            player.play(23);  // Play connection success sound
             delay(3000);
         } else {
             Serial.println("\nFailed to connect. Returning to WiFi selection.");
@@ -237,8 +359,8 @@ void updateVolumeFromPotentiometer() {
   
   if (millis() - lastVolumeUpdate >= volumeUpdateInterval) {
     int potValue = readStablePotValue();
-    int newVolume = map(potValue, 4095, 0, 0, 30); 
-    newVolume = constrain(newVolume, 0, 30);
+    int newVolume = map(potValue, 4095, 0, 0, 25);  // Changed max volume to 25
+    newVolume = constrain(newVolume, 0, 25);
     
     if (newVolume != lastVolume) {
       player.volume(newVolume);
@@ -251,35 +373,90 @@ void updateVolumeFromPotentiometer() {
 }
 
 int convertToFileNumber(String soundCode) {
-  if (soundCode == "0004") return 1;
-  if (soundCode == "0005") return 2;
-  if (soundCode == "0006") return 3;
-  if (soundCode == "0007") return 4;
-  if (soundCode == "0008") return 5;
-  if (soundCode == "0009") return 6;
-  if (soundCode == "0010") return 7;
-  if (soundCode == "0011") return 8;
-  if (soundCode == "0012") return 9;
-  if (soundCode == "0013") return 10;
-  if (soundCode == "0014") return 11;
-  if (soundCode == "0015") return 12;
-  if (soundCode == "0016") return 13;
-  if (soundCode == "0017") return 14;
-  if (soundCode == "0018") return 15;
-  if (soundCode == "0019") return 16;
-  if (soundCode == "0020") return 17;
-  if (soundCode == "0031") return 18;
-  if (soundCode == "0032") return 19;
-  if (soundCode == "0033") return 20;
-  if (soundCode == "0001") return 21;
-  if (soundCode == "0002") return 22;
-  if (soundCode == "0003") return 23;
+  if (soundCode == "0035") return 1;
+  if (soundCode == "0001") return 2;
+  if (soundCode == "0002") return 3;
+  if (soundCode == "0003") return 4;
+  if (soundCode == "0004") return 5;
+  if (soundCode == "0005") return 6;
+  if (soundCode == "0006") return 7;
+  if (soundCode == "0007") return 8;
+  if (soundCode == "0008") return 9;
+  if (soundCode == "0009") return 10;
+  if (soundCode == "0010") return 11;
+  if (soundCode == "0011") return 12;
+  if (soundCode == "0012") return 13;
+  if (soundCode == "0013") return 14;
+  if (soundCode == "0014") return 15;
+  if (soundCode == "0015") return 16;
+  if (soundCode == "0016") return 17;
+  if (soundCode == "0017") return 18;
+  if (soundCode == "0018") return 19;
+  if (soundCode == "0019") return 20;
+  if (soundCode == "0020") return 21;
+  if (soundCode == "0031") return 22;
+  if (soundCode == "0032") return 23;
+  if (soundCode == "0033") return 24;
+  if (soundCode == "0034") return 25;
 
   return 0;
 }
 
-void playSoundForAmount(int total_amount) {
-    player.play(20); 
+void playTableCode(String tableCode) {
+    int number = tableCode.toInt();
+    int ratusan = number / 100;
+    int puluhan = (number % 100) / 10;
+    int satuan = number % 10;
+
+    String soundCodes[10];
+    int index = 0;
+
+    player.play(convertToFileNumber("0034")); // Play "di meja" sound
+    delay(1000);
+
+    // Handle ratusan
+    if (ratusan > 0) {
+        if (ratusan == 1 && puluhan == 0 && satuan == 0) {
+            soundCodes[index++] = "0013"; // "seratus"
+        } else {
+            soundCodes[index++] = getNumberCode(ratusan);
+            soundCodes[index++] = "0016"; // "ratus"
+        }
+    }
+
+    // Handle puluhan dan satuan
+    if (puluhan == 1) {
+        if (satuan == 0) {
+            soundCodes[index++] = "0010"; // "sepuluh"
+        } else if (satuan == 1) {
+            soundCodes[index++] = "0012"; // "sebelas"
+        } else {
+            soundCodes[index++] = getNumberCode(satuan);
+            soundCodes[index++] = "0018"; // "belas"
+        }
+    } else {
+        if (puluhan > 1) {
+            soundCodes[index++] = getNumberCode(puluhan);
+            soundCodes[index++] = "0015"; // "puluh"
+        }
+        if (satuan > 0) {
+            soundCodes[index++] = getNumberCode(satuan);
+        }
+    }
+
+    // Play the sound sequence
+    for (int i = 0; i < index; i++) {
+        int fileNumber = convertToFileNumber(soundCodes[i]);
+        if (fileNumber > 0) {
+            player.play(fileNumber);
+            delay(1000);
+        }
+    }
+}
+
+void playSoundForAmount(int total_amount, String tableCode = "") {
+    updateVolumeFromPotentiometer();
+    player.play(24); // Bell sound
     delay(1000);
 
     String soundCodes[20];
@@ -288,17 +465,12 @@ void playSoundForAmount(int total_amount) {
     // Pisahkan komponen angka
     int ratusan_ribu = total_amount / 100000;
     int puluhan_ribu = (total_amount % 100000) / 10000;
-    int ribuan       = (total_amount % 10000) / 1000;
-    int ratusan      = (total_amount % 1000) / 100;
-    int puluhan      = (total_amount % 100) / 10;
-    int satuan       = total_amount % 10;
+    int ribuan = (total_amount % 10000) / 1000;
+    int ratusan = (total_amount % 1000) / 100;
+    int puluhan = (total_amount % 100) / 10;
+    int satuan = total_amount % 10;
 
-    auto getNumberCode = [](int num) -> String {
-        if (num >= 1 && num <= 9) return "000" + String(num);
-        return "";
-    };
-
-    // === HANDLE RATUSAN RIBU ===
+    // Handle ratusan ribu
     if (ratusan_ribu > 0) {
         if (ratusan_ribu == 1) {
             soundCodes[index++] = "0013"; // "seratus"
@@ -308,8 +480,7 @@ void playSoundForAmount(int total_amount) {
         }
     }
 
-
-    // === HANDLE PULUHAN RIBU dan RIBUAN ===
+    // Handle puluhan ribu dan ribuan
     if (puluhan_ribu == 1) {
         if (ribuan == 0) {
             soundCodes[index++] = "0010"; // "sepuluh"
@@ -338,7 +509,7 @@ void playSoundForAmount(int total_amount) {
         soundCodes[index++] = "0014"; // "ribu"
     }
 
-    // === HANDLE RATUSAN ===
+    // Handle ratusan
     if (ratusan > 0) {
         if (ratusan == 1) {
             soundCodes[index++] = "0013"; // "seratus"
@@ -348,7 +519,7 @@ void playSoundForAmount(int total_amount) {
         }
     }
 
-    // === HANDLE PULUHAN & SATUAN ===
+    // Handle puluhan & satuan
     if (puluhan == 1) {
         if (satuan == 0) {
             soundCodes[index++] = "0010"; // "sepuluh"
@@ -368,18 +539,13 @@ void playSoundForAmount(int total_amount) {
         soundCodes[index++] = getNumberCode(satuan);
     }
 
-    // === AKHIRAN ===
+    // Akhiran
     soundCodes[index++] = "0017"; // "rupiah"
     soundCodes[index++] = "0019"; // "diterima"
 
-    // === DEBUG ===
-    Serial.println("Sound sequence:");
+    // Play sound sequence with real-time volume control
     for (int i = 0; i < index; i++) {
-        Serial.println(soundCodes[i]);
-    }
-
-    // === PLAY SOUND DENGAN REAL-TIME VOLUME CONTROL ===
-    for (int i = 0; i < index; i++) {
+      updateVolumeFromPotentiometer();
         int fileNumber = convertToFileNumber(soundCodes[i]);
         if (fileNumber > 0) {
             player.play(fileNumber);
@@ -391,6 +557,11 @@ void playSoundForAmount(int total_amount) {
             }
         }
     }
+
+    // Play table code if available
+    // if (tableCode != "") {
+    //     playTableCode(tableCode);
+    // }
 }
 
 void updateTransactionStatus(String transactionId) {
@@ -454,13 +625,16 @@ void fetchLatestTransaction() {
       JsonObject data = doc["data"][0];
       transactionId = data["_id"].as<String>();
       int total_amount = data["total_amount"].as<int>();
+      String tableCode = data["table_code"].as<String>();
       
       Serial.print("[API] Transaction ID: ");
       Serial.println(transactionId);
       Serial.print("[API] Total Amount: ");
       Serial.println(total_amount);
+      Serial.print("[API] Table Code: ");
+      Serial.println(tableCode);
       
-      playSoundForAmount(total_amount);
+      playSoundForAmount(total_amount, tableCode);
     } else {
       Serial.println("[API ERROR] Failed to parse JSON or API returned error");
     }
@@ -508,11 +682,14 @@ void fetchTransactionData() {
       for (JsonVariant item : dataArray) {
         transactionId = item["_id"].as<String>();
         int total_amount = item["total_amount"].as<int>();
+        String tableCode = item["table_code"].as<String>();
         
         Serial.print("[FETCH] Processing ID: ");
         Serial.println(transactionId);
+        Serial.print("[FETCH] Table Code: ");
+        Serial.println(tableCode);
         
-        playSoundForAmount(total_amount);
+        playSoundForAmount(total_amount, tableCode);
         updateTransactionStatus(transactionId);
       }
     } else {
@@ -583,7 +760,24 @@ void setup() {
   pinMode(buttonPin, INPUT_PULLUP);
   pinMode(potPin, INPUT);
   
+  // Read initial potentiometer value for volume setting
+  int initialPotValue = readStablePotValue(10);  // Take 10 samples for stable reading
+  int initialVolume = map(initialPotValue, 4095, 0, 0, 25);  // Changed max volume to 25
+  initialVolume = constrain(initialVolume, 0, 25);
+  lastVolume = initialVolume;  // Update lastVolume to the initial value
+
   configureDFPlayer();
+
+  // Set initial volume before playing any sounds
+  player.volume(initialVolume);
+  Serial.print("Initial volume set to: ");
+  Serial.println(initialVolume);
+  
+  updateVolumeFromPotentiometer();  // Ensure volume is set before playing
+  player.play(21);  // Play welcome sound 1
+  delay(5000);
+  updateVolumeFromPotentiometer();  // Update again before second sound
+  player.play(22);  // Play welcome sound 2
   
   WiFi.softAP(apSSID, apPassword);
   Serial.println("Access Point started!");
@@ -602,11 +796,23 @@ void loop() {
   checkButton();
   
   if (WiFi.status() != WL_CONNECTED) {
+    if (wifiConnected) {
+      // Just lost connection
+      Serial.println("\n[NETWORK] WiFi connection lost!");
+      updateVolumeFromPotentiometer();
+      player.play(1); 
+      delay(1000);
+    }
     wifiConnected = false;
-  } else if (!wifiConnected) {
-    wifiConnected = true;
-    player.volume(30);
-    Serial.println("\n[NETWORK] WiFi connected!");
+    wasConnected = false;
+  } else {
+    if (!wifiConnected) {
+      // Just connected
+      wifiConnected = true;
+      wasConnected = true;
+      updateVolumeFromPotentiometer();
+      Serial.println("\n[NETWORK] WiFi connected!");
+    }
   }
 
   updateVolumeFromPotentiometer();
