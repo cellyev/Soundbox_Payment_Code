@@ -19,12 +19,11 @@ Kode ini merupakan program utama yang dijalankan pada perangkat IoT bernama **So
 
 ## 📦 Teknologi yang Digunakan
 
-- **Mikrokontroler:** ESP32 / NodeMCU
+- **Mikrokontroler:** ESP32 
 - **Bahasa:** Arduino C++
 - **Koneksi:** WiFi
 - **Output:** Speaker / Buzzer
 - **Input:** Tombol (Replay, Volume)
-- **Tambahan (opsional):** OLED Display
 
 ---
 
